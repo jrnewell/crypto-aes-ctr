@@ -64,10 +64,10 @@ Handle<Value> OpenSSLWrapper::NewInstance(const Arguments& args) {
   return scope.Close(instance);
 }
 
-void OpenSSLWrapper::printHexStr(unsigned char *str, int len) {
+void OpenSSLWrapper::printHexStr(const unsigned char *str, int len) {
   for (int i = 0; i < len; i++) {
-    char p = str[i];
-    printf("%02x", p);
+    const unsigned char* p = str + i;
+    printf("%02x", *p);
   }
 }
 
@@ -87,6 +87,13 @@ void OpenSSLWrapper::incrementCounter() {
 bool OpenSSLWrapper::InitIv(const char* key, int key_len, const char* iv, int iv_len, unsigned int counter) {
   HandleScope scope;
 
+  printf("AES_BLOCK_SIZE: %d\n", AES_BLOCK_SIZE);
+  printf("counter: %d\n", counter);
+  printf("iv: ");
+  printHexStr((unsigned char*) iv, iv_len);
+  printf("\n");
+  printf("iv_len: %d\n", iv_len);
+
   if (AES_set_encrypt_key((const unsigned char *)key, key_len * 8, &key_) < 0) {
     return false;
   }
@@ -105,10 +112,10 @@ bool OpenSSLWrapper::InitIv(const char* key, int key_len, const char* iv, int iv
     incrementCounter();
   }
 
-  // printf("counter: %d\n", counter);
-  // printf("ivec: ");
-  // printHexStr(state_.ivec, 16);
-  // printf("\n");
+  printf("counter: %d\n", counter);
+  printf("ivec: ");
+  printHexStr(state_.ivec, AES_BLOCK_SIZE);
+  printf("\n");
 
   initialised_ = true;
   return true;
@@ -125,11 +132,11 @@ bool OpenSSLWrapper::Update(const char* data, int len, unsigned char** out, int*
   AES_ctr128_encrypt((const unsigned char*)data, *out, len, &key_, state_.ivec, state_.ecount, &state_.num);
 
   // printf("ivec: ");
-  // printHexStr(state_.ivec, 16);
+  // printHexStr(state_.ivec, AES_BLOCK_SIZE);
   // printf("\n");
 
   // printf("ecount: ");
-  // printHexStr(state_.ecount, 16);
+  // printHexStr(state_.ecount, AES_BLOCK_SIZE);
   // printf("\n");
 
   // printf("num: %d\n", state_.num);
