@@ -24,7 +24,7 @@ var key = crypto.pbkdf2Sync(password, salt, iterations, 32);
 var iv = crypto.randomBytes(8);
 var cipherStream = cryptoAesCtr.createStream(key, iv);
 
-// pipe file input stream to cipherStream
+// pipe encrypted input stream to cipherStream
 
 ```
 
@@ -38,13 +38,15 @@ If you would like to start decrypting in the middle file, you just need to pass 
 var aesBlockSize = 16;
 var counter = 3;
 
-// discard
+// starting in middle of encrypted file
 var fileInStream = fs.createReadStream(myFile, { start: (aesBlockSize * counter) });
 
 // ...
 
+// create cipher stream with correct counter
 var cipherStream = cryptoAesCtr.createStream(key, iv, counter);
 
+// pipe encrypted input stream to cipherStream
 fileInStream.pipe(cipherStream);
 
 ```
