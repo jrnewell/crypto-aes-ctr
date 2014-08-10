@@ -22,19 +22,16 @@ class OpenSSLWrapper : public node::ObjectWrap {
 
   static v8::Persistent<v8::Function> constructor;
   static v8::Handle<v8::Value> New(const v8::Arguments& args);
-  static v8::Handle<v8::Value> PlusOne(const v8::Arguments& args);
 
-  void InitIv(const char* key, int key_len, const char* iv, int iv_len, unsigned int counter);
+  bool InitIv(const char* key, int key_len, const char* iv, int iv_len, unsigned int counter);
   bool Update(const char* data, int len, unsigned char** out, int* out_len);
 
   static v8::Handle<v8::Value> InitIv(const v8::Arguments& args);
   static v8::Handle<v8::Value> Update(const v8::Arguments& args);
 
-  double counter_;
   bool initialised_;
   AES_KEY key_;
   struct ctr_state state_;
-
 };
 
 #endif

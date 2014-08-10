@@ -37,8 +37,10 @@ void OpenSSLWrapper::Init() {
   tpl->SetClassName(String::NewSymbol("OpenSSLWrapper"));
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
   // Prototype
-  tpl->PrototypeTemplate()->Set(String::NewSymbol("plusOne"),
-      FunctionTemplate::New(PlusOne)->GetFunction());
+  tpl->PrototypeTemplate()->Set(String::NewSymbol("initIV"),
+      FunctionTemplate::New(InitIv)->GetFunction());
+  tpl->PrototypeTemplate()->Set(String::NewSymbol("update"),
+      FunctionTemplate::New(Update)->GetFunction());
 
   constructor = Persistent<Function>::New(tpl->GetFunction());
 }
@@ -47,7 +49,6 @@ Handle<Value> OpenSSLWrapper::New(const Arguments& args) {
   HandleScope scope;
 
   OpenSSLWrapper* obj = new OpenSSLWrapper();
-  obj->counter_ = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
   obj->Wrap(args.This());
 
   return args.This();
@@ -63,21 +64,11 @@ Handle<Value> OpenSSLWrapper::NewInstance(const Arguments& args) {
   return scope.Close(instance);
 }
 
-Handle<Value> OpenSSLWrapper::PlusOne(const Arguments& args) {
-  HandleScope scope;
-
-  OpenSSLWrapper* obj = ObjectWrap::Unwrap<OpenSSLWrapper>(args.This());
-  obj->counter_ += 1;
-
-  return scope.Close(Number::New(obj->counter_));
-}
-
-void OpenSSLWrapper::InitIv(const char* key, int key_len, const char* iv, int iv_len, unsigned int counter) {
+bool OpenSSLWrapper::InitIv(const char* key, int key_len, const char* iv, int iv_len, unsigned int counter) {
   HandleScope scope;
 
   if (AES_set_encrypt_key((const unsigned char *)key, key_len * 8, &key_) < 0) {
-    ThrowException(Exception::Error(String::New("Could not set decryption key.")));
-    return;
+    return false;
   }
 
   // aes_ctr128_encrypt requires 'num' and 'ecount' set to zero on the first call.
@@ -91,9 +82,12 @@ void OpenSSLWrapper::InitIv(const char* key, int key_len, const char* iv, int iv
   memcpy(state_.ivec, iv, 8);
 
   initialised_ = true;
+  return true;
 }
 
 bool OpenSSLWrapper::Update(const char* data, int len, unsigned char** out, int* out_len) {
+  HandleScope scope;
+
   if (!initialised_)
     return false;
 
@@ -121,7 +115,9 @@ Handle<Value> OpenSSLWrapper::InitIv(const Arguments& args) {
   const char* iv_buf = Buffer::Data(args[1]);
   unsigned int counter = args[0]->Uint32Value();
 
-  base->InitIv(key_buf, key_len, iv_buf, iv_len, counter);
+  if (!base->InitIv(key_buf, key_len, iv_buf, iv_len, counter)) {
+    return ThrowException(Exception::Error(String::New("Could not set encryption key.")));
+  }
 
   return scope.Close(Undefined());
 }
@@ -143,18 +139,14 @@ Handle<Value> OpenSSLWrapper::Update(const Arguments& args) {
     encoding encoding = ParseEncoding(args[1], BINARY);
     if (!StringBytes::IsValidString(string, encoding)) {
       return ThrowException(Exception::TypeError(String::New("Bad input string")));
-      //return;
     }
     size_t buflen = StringBytes::StorageSize(string, encoding);
     char* buf = new char[buflen];
-    size_t written = StringBytes::Write(
-                                        buf,
-                                        buflen,
-                                        string,
-                                        encoding);
+    size_t written = StringBytes::Write(buf, buflen, string, encoding);
     r = base->Update(buf, written, &out, &out_len);
     delete[] buf;
-  } else {
+  }
+  else {
     char* buf = Buffer::Data(args[0]);
     size_t buflen = Buffer::Length(args[0]);
     r = base->Update(buf, buflen, &out, &out_len);
@@ -163,7 +155,6 @@ Handle<Value> OpenSSLWrapper::Update(const Arguments& args) {
   if (!r) {
     delete[] out;
     return ThrowException(Exception::Error(String::New("Trying to add data in unsupported state")));
-    //return;
   }
 
   Buffer* buf = Buffer::New(reinterpret_cast<char*>(out), out_len);
