@@ -29,6 +29,9 @@ class OpenSSLWrapper : public node::ObjectWrap {
   static v8::Handle<v8::Value> InitIv(const v8::Arguments& args);
   static v8::Handle<v8::Value> Update(const v8::Arguments& args);
 
+  void printHexStr(unsigned char *str, int len);
+  void incrementCounter();
+
   bool initialised_;
   AES_KEY key_;
   struct ctr_state state_;

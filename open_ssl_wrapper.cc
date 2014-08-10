@@ -37,7 +37,7 @@ void OpenSSLWrapper::Init() {
   tpl->SetClassName(String::NewSymbol("OpenSSLWrapper"));
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
   // Prototype
-  tpl->PrototypeTemplate()->Set(String::NewSymbol("initIV"),
+  tpl->PrototypeTemplate()->Set(String::NewSymbol("init"),
       FunctionTemplate::New(InitIv)->GetFunction());
   tpl->PrototypeTemplate()->Set(String::NewSymbol("update"),
       FunctionTemplate::New(Update)->GetFunction());
@@ -64,6 +64,26 @@ Handle<Value> OpenSSLWrapper::NewInstance(const Arguments& args) {
   return scope.Close(instance);
 }
 
+void OpenSSLWrapper::printHexStr(unsigned char *str, int len) {
+  for (int i = 0; i < len; i++) {
+    char p = str[i];
+    printf("%02x", p);
+  }
+}
+
+void OpenSSLWrapper::incrementCounter() {
+  int n=8;
+  unsigned char c;
+
+  do {
+    --n;
+    c = state_.ivec[8 + n];
+    ++c;
+    state_.ivec[8 + n] = c;
+    if (c) return;
+  } while (n);
+}
+
 bool OpenSSLWrapper::InitIv(const char* key, int key_len, const char* iv, int iv_len, unsigned int counter) {
   HandleScope scope;
 
@@ -81,6 +101,15 @@ bool OpenSSLWrapper::InitIv(const char* key, int key_len, const char* iv, int iv
   // Copy 8 bytes of IV into 'ivec'
   memcpy(state_.ivec, iv, 8);
 
+  for(unsigned int i = 0; i < counter; i++) {
+    incrementCounter();
+  }
+
+  // printf("counter: %d\n", counter);
+  // printf("ivec: ");
+  // printHexStr(state_.ivec, 16);
+  // printf("\n");
+
   initialised_ = true;
   return true;
 }
@@ -94,6 +123,17 @@ bool OpenSSLWrapper::Update(const char* data, int len, unsigned char** out, int*
   *out_len = len;
   *out = new unsigned char[*out_len];
   AES_ctr128_encrypt((const unsigned char*)data, *out, len, &key_, state_.ivec, state_.ecount, &state_.num);
+
+  // printf("ivec: ");
+  // printHexStr(state_.ivec, 16);
+  // printf("\n");
+
+  // printf("ecount: ");
+  // printHexStr(state_.ecount, 16);
+  // printf("\n");
+
+  // printf("num: %d\n", state_.num);
+
   return true;
 }
 
@@ -106,14 +146,14 @@ Handle<Value> OpenSSLWrapper::InitIv(const Arguments& args) {
     return ThrowException(Exception::TypeError(String::New("Must give key, iv and count as arguments")));
   }
 
+  ASSERT_IS_BUFFER(args[0]);
   ASSERT_IS_BUFFER(args[1]);
-  ASSERT_IS_BUFFER(args[2]);
 
   ssize_t key_len = Buffer::Length(args[0]);
   const char* key_buf = Buffer::Data(args[0]);
   ssize_t iv_len = Buffer::Length(args[1]);
   const char* iv_buf = Buffer::Data(args[1]);
-  unsigned int counter = args[0]->Uint32Value();
+  unsigned int counter = args[2]->Uint32Value();
 
   if (!base->InitIv(key_buf, key_len, iv_buf, iv_len, counter)) {
     return ThrowException(Exception::Error(String::New("Could not set encryption key.")));
@@ -130,7 +170,7 @@ Handle<Value> OpenSSLWrapper::Update(const Arguments& args) {
   ASSERT_IS_STRING_OR_BUFFER(args[0]);
 
   unsigned char* out = NULL;
-  bool r;
+  bool ret_val;
   int out_len = 0;
 
   // Only copy the data if we have to, because it's a string
@@ -143,16 +183,16 @@ Handle<Value> OpenSSLWrapper::Update(const Arguments& args) {
     size_t buflen = StringBytes::StorageSize(string, encoding);
     char* buf = new char[buflen];
     size_t written = StringBytes::Write(buf, buflen, string, encoding);
-    r = base->Update(buf, written, &out, &out_len);
+    ret_val = base->Update(buf, written, &out, &out_len);
     delete[] buf;
   }
   else {
     char* buf = Buffer::Data(args[0]);
     size_t buflen = Buffer::Length(args[0]);
-    r = base->Update(buf, buflen, &out, &out_len);
+    ret_val = base->Update(buf, buflen, &out, &out_len);
   }
 
-  if (!r) {
+  if (!ret_val) {
     delete[] out;
     return ThrowException(Exception::Error(String::New("Trying to add data in unsupported state")));
   }
