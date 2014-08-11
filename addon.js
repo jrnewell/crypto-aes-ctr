@@ -38,7 +38,12 @@ CryptoAesStream.prototype._transform = function(chunk, encoding, cb) {
 
 module.exports = {
   createStream: function (key, iv, counter) {
+    if (_.isString(key)) key = new Buffer(key, 'binary');
+    if (_.isString(iv)) iv = new Buffer(iv, 'binary');
     if (!_.isNumber(counter)) counter = 0;
+    if (iv.length < 8) {
+      throw new Error("IV buffer needs to be of length 8");
+    }
     var openSSLWrapper = newOpenSSLWrapper()
     openSSLWrapper.init(key, iv, counter);
     return new CryptoAesStream(openSSLWrapper, {});
