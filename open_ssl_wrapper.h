@@ -32,6 +32,8 @@ class OpenSSLWrapper : public node::ObjectWrap {
   void printHexStr(const unsigned char *str, int len);
   void incrementCounter();
 
+  static enum node::encoding ParseEncoding(v8::Handle<v8::Value> encoding_v, enum node::encoding _default);
+
   bool initialised_;
   AES_KEY key_;
   struct ctr_state state_;

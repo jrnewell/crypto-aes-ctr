@@ -2,11 +2,25 @@
 #include <node.h>
 #include <openssl/aes.h>
 #include <node_buffer.h>
-#include <string_bytes.h>
+#include <util.h>
+#include "string_bytes.h"
 #include "open_ssl_wrapper.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+  #define snprintf _snprintf
+  #define vsnprintf _vsnprintf
+  #define strcasecmp _stricmp
+  #define strncasecmp _strnicmp
+#endif
+
 using node::encoding;
+using node::UTF8;
+using node::ASCII;
+using node::BASE64;
+using node::UCS2;
 using node::BINARY;
+using node::BUFFER;
+using node::HEX;
 using node::Buffer;
 using node::StringBytes;
 
@@ -162,7 +176,7 @@ Handle<Value> OpenSSLWrapper::Update(const Arguments& args) {
   // Only copy the data if we have to, because it's a string
   if (args[0]->IsString()) {
     Local<String> string = args[0].As<String>();
-    encoding encoding = ParseEncoding(args[1], BINARY);
+    encoding encoding = OpenSSLWrapper::ParseEncoding(args[1], BINARY);
     if (!StringBytes::IsValidString(string, encoding)) {
       return ThrowException(Exception::TypeError(String::New("Bad input string")));
     }
@@ -193,4 +207,46 @@ Handle<Value> OpenSSLWrapper::Update(const Arguments& args) {
   v8::Handle<v8::Value> constructorArgs[3] = { buf->handle_, v8::Integer::New(out_len), v8::Integer::New(0) };
   v8::Local<v8::Object> actualBuffer = bufferConstructor->NewInstance(3, constructorArgs);
   return scope.Close(actualBuffer);
+}
+
+int node::WRITE_UTF8_FLAGS = v8::String::HINT_MANY_WRITES_EXPECTED |
+                             v8::String::NO_NULL_TERMINATION |
+                             v8::String::REPLACE_INVALID_UTF8;
+
+enum encoding OpenSSLWrapper::ParseEncoding(Handle<Value> encoding_v, enum encoding _default) {
+  HandleScope scope;
+
+  if (!encoding_v->IsString()) return _default;
+
+  node::Utf8Value encoding(encoding_v);
+
+  if (strcasecmp(*encoding, "utf8") == 0) {
+    return UTF8;
+  } else if (strcasecmp(*encoding, "utf-8") == 0) {
+    return UTF8;
+  } else if (strcasecmp(*encoding, "ascii") == 0) {
+    return ASCII;
+  } else if (strcasecmp(*encoding, "base64") == 0) {
+    return BASE64;
+  } else if (strcasecmp(*encoding, "ucs2") == 0) {
+    return UCS2;
+  } else if (strcasecmp(*encoding, "ucs-2") == 0) {
+    return UCS2;
+  } else if (strcasecmp(*encoding, "utf16le") == 0) {
+    return UCS2;
+  } else if (strcasecmp(*encoding, "utf-16le") == 0) {
+    return UCS2;
+  } else if (strcasecmp(*encoding, "binary") == 0) {
+    return BINARY;
+  } else if (strcasecmp(*encoding, "buffer") == 0) {
+    return BUFFER;
+  } else if (strcasecmp(*encoding, "hex") == 0) {
+    return HEX;
+  } else if (strcasecmp(*encoding, "raw") == 0) {
+    return BINARY;
+  } else if (strcasecmp(*encoding, "raws") == 0) {
+    return BINARY;
+  } else {
+    return _default;
+  }
 }
