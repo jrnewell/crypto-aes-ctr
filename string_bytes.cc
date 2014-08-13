@@ -107,7 +107,7 @@ static inline size_t base64_decode(char *buf,
   const char* srcEnd = src + srcLen;
 
   while (src < srcEnd && dst < dstEnd) {
-    int remaining = srcEnd - src;
+    int remaining = (int)(srcEnd - src);
 
     while (unbase64(*src) < 0 && src < srcEnd) src++, remaining--;
     if (remaining == 0 || *src == '=') break;
