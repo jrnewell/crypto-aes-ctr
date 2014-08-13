@@ -155,7 +155,7 @@ Handle<Value> OpenSSLWrapper::InitIv(const Arguments& args) {
   const char* iv_buf = Buffer::Data(args[1]);
   unsigned int counter = args[2]->Uint32Value();
 
-  if (!base->InitIv(key_buf, key_len, iv_buf, iv_len, counter)) {
+  if (!base->InitIv(key_buf, (int)key_len, iv_buf, (int)iv_len, counter)) {
     return ThrowException(Exception::Error(String::New("Could not set encryption key.")));
   }
 
@@ -183,13 +183,13 @@ Handle<Value> OpenSSLWrapper::Update(const Arguments& args) {
     size_t buflen = StringBytes::StorageSize(string, encoding);
     char* buf = new char[buflen];
     size_t written = StringBytes::Write(buf, buflen, string, encoding);
-    ret_val = base->Update(buf, written, &out, &out_len);
+    ret_val = base->Update(buf, (int)written, &out, &out_len);
     delete[] buf;
   }
   else {
     char* buf = Buffer::Data(args[0]);
     size_t buflen = Buffer::Length(args[0]);
-    ret_val = base->Update(buf, buflen, &out, &out_len);
+    ret_val = base->Update(buf, (int)buflen, &out, &out_len);
   }
 
   if (!ret_val) {

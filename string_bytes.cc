@@ -192,20 +192,20 @@ size_t StringBytes::Write(char* buf,
 
   switch (encoding) {
     case ASCII:
-      len = str->WriteAscii(buf, 0, buflen, flags);
+      len = str->WriteAscii(buf, 0, (int)buflen, flags);
       if (chars_written != NULL) {
-        *chars_written = len;
+        *chars_written = (int)len;
       }
       break;
 
     case UTF8:
-      len = str->WriteUtf8(buf, buflen, chars_written, WRITE_UTF8_FLAGS);
+      len = str->WriteUtf8(buf, (int)buflen, chars_written, WRITE_UTF8_FLAGS);
       break;
 
     case UCS2:
-      len = str->Write(reinterpret_cast<uint16_t*>(buf), 0, buflen, flags);
+      len = str->Write(reinterpret_cast<uint16_t*>(buf), 0, (int)buflen, flags);
       if (chars_written != NULL) {
-        *chars_written = len;
+        *chars_written = (int)len;
       }
       len = len * sizeof(uint16_t);
       break;
@@ -214,7 +214,7 @@ size_t StringBytes::Write(char* buf,
       String::AsciiValue value(str);
       len = base64_decode(buf, buflen, *value, value.length());
       if (chars_written != NULL) {
-        *chars_written = len;
+        *chars_written = (int)len;
       }
       break;
     }
@@ -224,7 +224,7 @@ size_t StringBytes::Write(char* buf,
       // TODO(isaacs): THIS IS AWFUL!!!
       uint16_t* twobytebuf = new uint16_t[buflen];
 
-      len = str->Write(twobytebuf, 0, buflen, flags);
+      len = str->Write(twobytebuf, 0, (int)buflen, flags);
 
       for (size_t i = 0; i < buflen && i < len; i++) {
         unsigned char *b = reinterpret_cast<unsigned char*>(&twobytebuf[i]);
@@ -232,7 +232,7 @@ size_t StringBytes::Write(char* buf,
       }
 
       if (chars_written != NULL) {
-        *chars_written = len;
+        *chars_written = (int)len;
       }
 
       delete[] twobytebuf;
@@ -243,7 +243,7 @@ size_t StringBytes::Write(char* buf,
       String::AsciiValue value(str);
       len = hex_decode(buf, buflen, *value, value.length());
       if (chars_written != NULL) {
-        *chars_written = len * 2;
+        *chars_written = (int)(len * 2);
       }
       break;
     }
@@ -491,7 +491,7 @@ static size_t base64_encode(const char* src,
 
   i = 0;
   k = 0;
-  n = slen / 3 * 3;
+  n = (int)(slen / 3 * 3);
 
   while (i < n) {
     a = src[i + 0] & 0xff;
@@ -568,15 +568,15 @@ Local<Value> StringBytes::Encode(const char* buf,
       if (contains_non_ascii(buf, buflen)) {
         char* out = new char[buflen];
         force_ascii(buf, out, buflen);
-        val = String::New(out, buflen);
+        val = String::New(out, (int)buflen);
         delete[] out;
       } else {
-        val = String::New(buf, buflen);
+        val = String::New(buf, (int)buflen);
       }
       break;
 
     case UTF8:
-      val = String::New(buf, buflen);
+      val = String::New(buf, (int)buflen);
       break;
 
     case BINARY: {
@@ -587,7 +587,7 @@ Local<Value> StringBytes::Encode(const char* buf,
         // XXX is the following line platform independent?
         twobytebuf[i] = cbuf[i];
       }
-      val = String::New(twobytebuf, buflen);
+      val = String::New(twobytebuf, (int)buflen);
       delete[] twobytebuf;
       break;
     }
@@ -599,14 +599,14 @@ Local<Value> StringBytes::Encode(const char* buf,
       size_t written = base64_encode(buf, buflen, dst, dlen);
       assert(written == dlen);
 
-      val = String::New(dst, dlen);
+      val = String::New(dst, (int)dlen);
       delete[] dst;
       break;
     }
 
     case UCS2: {
       const uint16_t* data = reinterpret_cast<const uint16_t*>(buf);
-      val = String::New(data, buflen / 2);
+      val = String::New(data, (int)(buflen / 2));
       break;
     }
 
@@ -616,7 +616,7 @@ Local<Value> StringBytes::Encode(const char* buf,
       size_t written = hex_encode(buf, buflen, dst, dlen);
       assert(written == dlen);
 
-      val = String::New(dst, dlen);
+      val = String::New(dst, (int)dlen);
       delete[] dst;
       break;
     }
