@@ -27,13 +27,22 @@
                      ]
                   ],
                   "defines":[
-                     "uint=unsigned int"
+                     "uint=unsigned int",
+                     "snprintf=_snprintf",
+                     "vsnprintf=_vsnprintf",
+                     "strcasecmp=_stricmp",
+                     "strncasecmp=_strnicmp"
                   ],
                   "libraries":[
                      "-l<(openssl_root)/lib/libeay32.lib"
                   ],
                   "include_dirs":[
                      "<(openssl_root)/include"
+                  ],
+                  "msvs_disabled_warnings":[
+                     4506,
+                     4244,
+                     4267
                   ]
                },
                {

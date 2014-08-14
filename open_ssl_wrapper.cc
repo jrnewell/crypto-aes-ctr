@@ -6,13 +6,6 @@
 #include "string_bytes.h"
 #include "open_ssl_wrapper.h"
 
-#if defined(_WIN32) || defined(_WIN64)
-  #define snprintf _snprintf
-  #define vsnprintf _vsnprintf
-  #define strcasecmp _stricmp
-  #define strncasecmp _strnicmp
-#endif
-
 using node::encoding;
 using node::UTF8;
 using node::ASCII;
