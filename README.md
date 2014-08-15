@@ -4,6 +4,8 @@ An alternative wrapper around OpenSSL's AES_ctr128_encrypt API that allows one t
 
 The `counter` parameter is the AES block index that will be first passed into the stream.  The block size of AES is 128 bits or 16 bytes.  See this [wikipedia page](http://en.wikipedia.org/wiki/Block_cipher_mode_of_operation) for more details on how AES CTR mode works.
 
+Make sure you have an OpenSSL library available.  For Windows build, the path assumed to be C:\OpenSSL-Win64 or C:\OpenSSL-Win32 for 64-bit or 32-bit builds respectively.
+
 ## Install
 
 ```shell
