@@ -1,4 +1,6 @@
 #define BUILDING_NODE_EXTENSION 1
+#include <stdlib.h>
+#include <string.h>
 #include <node.h>
 #include <openssl/aes.h>
 #include <node_buffer.h>
