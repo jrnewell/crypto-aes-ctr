@@ -1,4 +1,3 @@
-#define BUILDING_NODE_EXTENSION 1
 #include <stdlib.h>
 #include <string.h>
 #include <node.h>
@@ -9,25 +8,20 @@
 #include "open_ssl_wrapper.h"
 
 using node::encoding;
-using node::UTF8;
-using node::ASCII;
-using node::BASE64;
-using node::UCS2;
 using node::BINARY;
-using node::BUFFER;
-using node::HEX;
-using node::Buffer;
 using node::StringBytes;
 
 #define ASSERT_IS_STRING_OR_BUFFER(val) do {                  \
-    if (!Buffer::HasInstance(val) && !val->IsString()) {      \
-      return ThrowException(Exception::TypeError(String::New("Not a string or buffer"))); \
+    if (!node::Buffer::HasInstance(val) && !val->IsString()) {      \
+      isolate->ThrowException(Exception::TypeError(String::NewFromUtf8(isolate, "Not a string or buffer"))); \
+      return; \
     }                                                         \
   } while (0)
 
 #define ASSERT_IS_BUFFER(val) do {                            \
-    if (!Buffer::HasInstance(val)) {                          \
-      return ThrowException(Exception::TypeError(String::New("Not a buffer"))); \
+    if (!node::Buffer::HasInstance(val)) {                          \
+      isolate->ThrowException(Exception::TypeError(String::NewFromUtf8(isolate, "Not a buffer"))); \
+      return; \
     }                                                         \
   } while (0)
 
@@ -40,37 +34,38 @@ OpenSSLWrapper::~OpenSSLWrapper() {};
 
 Persistent<Function> OpenSSLWrapper::constructor;
 
-void OpenSSLWrapper::Init() {
+void OpenSSLWrapper::Init(Handle<Object> exports) {
+  Isolate* isolate = Isolate::GetCurrent();
+
   // Prepare constructor template
-  Local<FunctionTemplate> tpl = FunctionTemplate::New(New);
-  tpl->SetClassName(String::NewSymbol("OpenSSLWrapper"));
+  Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
+  tpl->SetClassName(String::NewFromUtf8(isolate, "OpenSSLWrapper"));
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
+
   // Prototype
-  tpl->PrototypeTemplate()->Set(String::NewSymbol("init"),
-      FunctionTemplate::New(InitIv)->GetFunction());
-  tpl->PrototypeTemplate()->Set(String::NewSymbol("update"),
-      FunctionTemplate::New(Update)->GetFunction());
+  NODE_SET_PROTOTYPE_METHOD(tpl, "init", InitIv);
+  NODE_SET_PROTOTYPE_METHOD(tpl, "update", Update);
 
-  constructor = Persistent<Function>::New(tpl->GetFunction());
+  constructor.Reset(isolate, tpl->GetFunction());
+  exports->Set(String::NewFromUtf8(isolate, "OpenSSLWrapper"), tpl->GetFunction());
 }
 
-Handle<Value> OpenSSLWrapper::New(const Arguments& args) {
-  HandleScope scope;
+void OpenSSLWrapper::New(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = Isolate::GetCurrent();
+  HandleScope scope(isolate);
 
-  OpenSSLWrapper* obj = new OpenSSLWrapper();
-  obj->Wrap(args.This());
-
-  return args.This();
-}
-
-Handle<Value> OpenSSLWrapper::NewInstance(const Arguments& args) {
-  HandleScope scope;
-
-  const unsigned argc = 1;
-  Handle<Value> argv[argc] = { args[0] };
-  Local<Object> instance = constructor->NewInstance(argc, argv);
-
-  return scope.Close(instance);
+  if (args.IsConstructCall()) {
+    // Invoked as constructor: `new OpenSSLWrapper(...)`
+    OpenSSLWrapper* obj = new OpenSSLWrapper();
+    obj->Wrap(args.This());
+    args.GetReturnValue().Set(args.This());
+  } else {
+    // Invoked as plain function `OpenSSLWrapper(...)`, turn into construct call.
+    const int argc = 0;
+    Local<Value> argv[argc] = {};
+    Local<Function> cons = Local<Function>::New(isolate, constructor);
+    args.GetReturnValue().Set(cons->NewInstance(argc, argv));
+  }
 }
 
 void OpenSSLWrapper::printHexStr(const unsigned char *str, int len) {
@@ -94,7 +89,6 @@ void OpenSSLWrapper::incrementCounter() {
 }
 
 bool OpenSSLWrapper::InitIv(const char* key, int key_len, const char* iv, int iv_len, unsigned int counter) {
-  HandleScope scope;
 
   if (AES_set_encrypt_key((const unsigned char *)key, key_len * 8, &key_) < 0) {
     return false;
@@ -120,7 +114,6 @@ bool OpenSSLWrapper::InitIv(const char* key, int key_len, const char* iv, int iv
 }
 
 bool OpenSSLWrapper::Update(const char* data, int len, unsigned char** out, int* out_len) {
-  HandleScope scope;
 
   if (!initialised_)
     return false;
@@ -132,35 +125,39 @@ bool OpenSSLWrapper::Update(const char* data, int len, unsigned char** out, int*
   return true;
 }
 
-Handle<Value> OpenSSLWrapper::InitIv(const Arguments& args) {
-  HandleScope scope;
+void OpenSSLWrapper::InitIv(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = Isolate::GetCurrent();
+  HandleScope scope(isolate);
 
-  OpenSSLWrapper* base = Unwrap<OpenSSLWrapper>(args.Holder());
+  OpenSSLWrapper* base = ObjectWrap::Unwrap<OpenSSLWrapper>(args.Holder());
 
   if (args.Length() < 3 || !args[2]->IsNumber()) {
-    return ThrowException(Exception::TypeError(String::New("Must give key, iv and count as arguments")));
+    isolate->ThrowException(Exception::TypeError(String::NewFromUtf8(isolate, "Must give key, iv and count as arguments")));
+    return;
   }
 
   ASSERT_IS_BUFFER(args[0]);
   ASSERT_IS_BUFFER(args[1]);
 
-  ssize_t key_len = Buffer::Length(args[0]);
-  const char* key_buf = Buffer::Data(args[0]);
-  ssize_t iv_len = Buffer::Length(args[1]);
-  const char* iv_buf = Buffer::Data(args[1]);
+  ssize_t key_len = node::Buffer::Length(args[0]);
+  const char* key_buf = node::Buffer::Data(args[0]);
+  ssize_t iv_len = node::Buffer::Length(args[1]);
+  const char* iv_buf = node::Buffer::Data(args[1]);
   unsigned int counter = args[2]->Uint32Value();
 
   if (!base->InitIv(key_buf, (int)key_len, iv_buf, (int)iv_len, counter)) {
-    return ThrowException(Exception::Error(String::New("Could not set encryption key.")));
+    isolate->ThrowException(Exception::Error(String::NewFromUtf8(isolate, "Could not set encryption key.")));
+    return;
   }
 
-  return scope.Close(Undefined());
+  return;
 }
 
-Handle<Value> OpenSSLWrapper::Update(const Arguments& args) {
-  HandleScope scope;
+void OpenSSLWrapper::Update(const FunctionCallbackInfo<Value>& args) {
+  Isolate* isolate = Isolate::GetCurrent();
+  HandleScope scope(isolate);
 
-  OpenSSLWrapper* base = Unwrap<OpenSSLWrapper>(args.Holder());
+  OpenSSLWrapper* base = ObjectWrap::Unwrap<OpenSSLWrapper>(args.Holder());
 
   ASSERT_IS_STRING_OR_BUFFER(args[0]);
 
@@ -171,9 +168,10 @@ Handle<Value> OpenSSLWrapper::Update(const Arguments& args) {
   // Only copy the data if we have to, because it's a string
   if (args[0]->IsString()) {
     Local<String> string = args[0].As<String>();
-    encoding encoding = OpenSSLWrapper::ParseEncoding(args[1], BINARY);
+    encoding encoding = node::ParseEncoding(isolate, args[1], BINARY);
     if (!StringBytes::IsValidString(string, encoding)) {
-      return ThrowException(Exception::TypeError(String::New("Bad input string")));
+      isolate->ThrowException(Exception::TypeError(String::NewFromUtf8(isolate, "Bad input string")));
+      return;
     }
     size_t buflen = StringBytes::StorageSize(string, encoding);
     char* buf = new char[buflen];
@@ -182,66 +180,22 @@ Handle<Value> OpenSSLWrapper::Update(const Arguments& args) {
     delete[] buf;
   }
   else {
-    char* buf = Buffer::Data(args[0]);
-    size_t buflen = Buffer::Length(args[0]);
+    char* buf = node::Buffer::Data(args[0]);
+    size_t buflen = node::Buffer::Length(args[0]);
     ret_val = base->Update(buf, (int)buflen, &out, &out_len);
   }
 
   if (!ret_val) {
     delete[] out;
-    return ThrowException(Exception::Error(String::New("Trying to add data in unsupported state")));
+    isolate->ThrowException(Exception::Error(String::NewFromUtf8(isolate, "Trying to add data in unsupported state")));
+    return;
   }
 
-  Buffer* buf = Buffer::New(reinterpret_cast<char*>(out), out_len);
+  v8::Local<v8::Object> buf = node::Buffer::New(isolate, reinterpret_cast<char*>(out), out_len);
   if (out) {
     delete[] out;
   }
 
-  v8::Local<v8::Object> globalObj = v8::Context::GetCurrent()->Global();
-  v8::Local<v8::Function> bufferConstructor = v8::Local<v8::Function>::Cast(globalObj->Get(v8::String::New("Buffer")));
-  v8::Handle<v8::Value> constructorArgs[3] = { buf->handle_, v8::Integer::New(out_len), v8::Integer::New(0) };
-  v8::Local<v8::Object> actualBuffer = bufferConstructor->NewInstance(3, constructorArgs);
-  return scope.Close(actualBuffer);
-}
-
-int node::WRITE_UTF8_FLAGS = v8::String::HINT_MANY_WRITES_EXPECTED |
-                             v8::String::NO_NULL_TERMINATION |
-                             v8::String::REPLACE_INVALID_UTF8;
-
-enum encoding OpenSSLWrapper::ParseEncoding(Handle<Value> encoding_v, enum encoding _default) {
-  HandleScope scope;
-
-  if (!encoding_v->IsString()) return _default;
-
-  node::Utf8Value encoding(encoding_v);
-
-  if (strcasecmp(*encoding, "utf8") == 0) {
-    return UTF8;
-  } else if (strcasecmp(*encoding, "utf-8") == 0) {
-    return UTF8;
-  } else if (strcasecmp(*encoding, "ascii") == 0) {
-    return ASCII;
-  } else if (strcasecmp(*encoding, "base64") == 0) {
-    return BASE64;
-  } else if (strcasecmp(*encoding, "ucs2") == 0) {
-    return UCS2;
-  } else if (strcasecmp(*encoding, "ucs-2") == 0) {
-    return UCS2;
-  } else if (strcasecmp(*encoding, "utf16le") == 0) {
-    return UCS2;
-  } else if (strcasecmp(*encoding, "utf-16le") == 0) {
-    return UCS2;
-  } else if (strcasecmp(*encoding, "binary") == 0) {
-    return BINARY;
-  } else if (strcasecmp(*encoding, "buffer") == 0) {
-    return BUFFER;
-  } else if (strcasecmp(*encoding, "hex") == 0) {
-    return HEX;
-  } else if (strcasecmp(*encoding, "raw") == 0) {
-    return BINARY;
-  } else if (strcasecmp(*encoding, "raws") == 0) {
-    return BINARY;
-  } else {
-    return _default;
-  }
+  args.GetReturnValue().Set(buf);
+  return;
 }

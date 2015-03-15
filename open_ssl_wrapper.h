@@ -1,8 +1,8 @@
-#define BUILDING_NODE_EXTENSION 1
 #ifndef _OPEN_SSL_WRAPPER_H
 #define _OPEN_SSL_WRAPPER_H
 
 #include <node.h>
+#include <node_object_wrap.h>
 #include <openssl/aes.h>
 
 struct ctr_state  {
@@ -13,26 +13,23 @@ struct ctr_state  {
 
 class OpenSSLWrapper : public node::ObjectWrap {
  public:
-  static void Init();
-  static v8::Handle<v8::Value> NewInstance(const v8::Arguments& args);
+  static void Init(v8::Handle<v8::Object> exports);
 
  private:
   OpenSSLWrapper();
   ~OpenSSLWrapper();
 
   static v8::Persistent<v8::Function> constructor;
-  static v8::Handle<v8::Value> New(const v8::Arguments& args);
+  static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
 
   bool InitIv(const char* key, int key_len, const char* iv, int iv_len, unsigned int counter);
   bool Update(const char* data, int len, unsigned char** out, int* out_len);
 
-  static v8::Handle<v8::Value> InitIv(const v8::Arguments& args);
-  static v8::Handle<v8::Value> Update(const v8::Arguments& args);
+  static void InitIv(const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void Update(const v8::FunctionCallbackInfo<v8::Value>& args);
 
   void printHexStr(const unsigned char *str, int len);
   void incrementCounter();
-
-  static enum node::encoding ParseEncoding(v8::Handle<v8::Value> encoding_v, enum node::encoding _default);
 
   bool initialised_;
   AES_KEY key_;

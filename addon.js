@@ -1,7 +1,7 @@
 var util = require('util');
 var _ = require('lodash');
 var Transform = require('stream').Transform;
-var newOpenSSLWrapper = require('./build/Release/addon');
+var newOpenSSLWrapper = require('./build/Release/addon').OpenSSLWrapper;
 
 util.inherits(CryptoAesStream, Transform);
 
@@ -44,7 +44,7 @@ module.exports = {
     if (iv.length < 8) {
       throw new Error("IV buffer needs to be of length 8");
     }
-    var openSSLWrapper = newOpenSSLWrapper()
+    var openSSLWrapper = newOpenSSLWrapper();
     openSSLWrapper.init(key, iv, counter);
     return new CryptoAesStream(openSSLWrapper, {});
   }
