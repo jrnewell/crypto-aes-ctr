@@ -9,7 +9,7 @@
 
 using node::encoding;
 using node::BINARY;
-using node::StringBytes;
+using crypto_aes_ctr::StringBytes;
 
 #define ASSERT_IS_STRING_OR_BUFFER(val) do {                  \
     if (!node::Buffer::HasInstance(val) && !val->IsString()) {      \
@@ -62,7 +62,7 @@ void OpenSSLWrapper::New(const FunctionCallbackInfo<Value>& args) {
   } else {
     // Invoked as plain function `OpenSSLWrapper(...)`, turn into construct call.
     const int argc = 0;
-    Local<Value> argv[argc] = {};
+    Local<Value> argv[1];
     Local<Function> cons = Local<Function>::New(isolate, constructor);
     args.GetReturnValue().Set(cons->NewInstance(argc, argv));
   }
@@ -168,7 +168,7 @@ void OpenSSLWrapper::Update(const FunctionCallbackInfo<Value>& args) {
   // Only copy the data if we have to, because it's a string
   if (args[0]->IsString()) {
     Local<String> string = args[0].As<String>();
-    encoding encoding = node::ParseEncoding(isolate, args[1], BINARY);
+    encoding encoding = StringBytes::ParseEncoding(isolate, args[1], BINARY);
     if (!StringBytes::IsValidString(string, encoding)) {
       isolate->ThrowException(Exception::TypeError(String::NewFromUtf8(isolate, "Bad input string")));
       return;
