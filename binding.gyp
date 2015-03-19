@@ -4,7 +4,8 @@
          "target_name":"addon",
          "sources":[
             "addon.cc",
-            "open_ssl_wrapper.cc"
+            "open_ssl_wrapper.cc",
+            "string_bytes.cc"
          ],
          "conditions":[
             [
