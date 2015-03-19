@@ -822,7 +822,7 @@ enum node::encoding StringBytes::ParseEncoding(Isolate* isolate,
   if (!encoding_v->IsString())
     return _default;
 
-  node::Utf8Value encoding(encoding_v);
+  Utf8Value encoding(isolate, encoding_v);
 
   if (strcasecmp(*encoding, "utf8") == 0) {
     return UTF8;
@@ -853,6 +853,31 @@ enum node::encoding StringBytes::ParseEncoding(Isolate* isolate,
   } else {
     return _default;
   }
+}
+
+Utf8Value::Utf8Value(Isolate* isolate, v8::Handle<v8::Value> value)
+  : length_(0), str_(NULL) {
+  if (value.IsEmpty())
+    return;
+
+  v8::Local<v8::String> val_ = value->ToString();
+  if (val_.IsEmpty())
+    return;
+
+  // Allocate enough space to include the null terminator
+  size_t len = StringBytes::StorageSize(isolate, val_, UTF8) + 1;
+
+  char* str = static_cast<char*>(calloc(1, len));
+
+  int flags = WRITE_UTF8_FLAGS;
+  flags |= ~v8::String::NO_NULL_TERMINATION;
+
+  length_ = val_->WriteUtf8(str,
+                            len,
+                            0,
+                            flags);
+
+  str_ = reinterpret_cast<char*>(str);
 }
 
 }  // namespace crypto_aes_ctr

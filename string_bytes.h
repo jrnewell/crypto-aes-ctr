@@ -19,8 +19,8 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef SRC_STRING_BYTES_H_
-#define SRC_STRING_BYTES_H_
+#ifndef CRYPTO_SRC_STRING_BYTES_H_
+#define CRYPTO_SRC_STRING_BYTES_H_
 
 // Decodes a v8::Handle<v8::String> or Buffer to a raw char*
 
@@ -79,54 +79,33 @@ class StringBytes {
   static node::encoding ParseEncoding(v8::Isolate* isolate,
                             v8::Handle<v8::Value> encoding_v,
                             enum node::encoding _default);
-
-  // Deprecated legacy interface
-
-  NODE_DEPRECATED("Use IsValidString(isolate, ...)",
-                  static inline bool IsValidString(
-      v8::Handle<v8::String> string,
-      enum node::encoding enc) {
-    return IsValidString(v8::Isolate::GetCurrent(), string, enc);
-  })
-
-  NODE_DEPRECATED("Use StorageSize(isolate, ...)",
-                  static inline size_t StorageSize(v8::Handle<v8::Value> val,
-                                                  enum node::encoding enc) {
-    return StorageSize(v8::Isolate::GetCurrent(), val, enc);
-  })
-
-  NODE_DEPRECATED("Use Size(isolate, ...)",
-                  static inline size_t Size(v8::Handle<v8::Value> val,
-                                            enum node::encoding enc) {
-    return Size(v8::Isolate::GetCurrent(), val, enc);
-  })
-
-  NODE_DEPRECATED("Use GetExternalParts(isolate, ...)",
-                  static inline bool GetExternalParts(v8::Handle<v8::Value> val,
-                                                      const char** data,
-                                                      size_t* len) {
-    return GetExternalParts(v8::Isolate::GetCurrent(), val, data, len);
-  })
-
-  NODE_DEPRECATED("Use Write(isolate, ...)",
-                  static inline size_t Write(char* buf,
-                                             size_t buflen,
-                                             v8::Handle<v8::Value> val,
-                                             enum node::encoding enc,
-                                             int* chars_written = NULL) {
-    v8::Isolate* isolate = v8::Isolate::GetCurrent();
-    return Write(isolate, buf, buflen, val, enc, chars_written);
-  })
-
-  NODE_DEPRECATED("Use Encode(isolate, ...)",
-                  static inline v8::Local<v8::Value> Encode(
-      const char* buf,
-      size_t buflen,
-      enum node::encoding encoding) {
-    return Encode(v8::Isolate::GetCurrent(), buf, buflen, encoding);
-  })
 };
 
-}  // namespace node
+class Utf8Value {
+  public:
+    explicit Utf8Value(v8::Isolate* isolate, v8::Handle<v8::Value> value);
 
-#endif  // SRC_STRING_BYTES_H_
+    ~Utf8Value() {
+      free(str_);
+    }
+
+    char* operator*() {
+      return str_;
+    };
+
+    const char* operator*() const {
+      return str_;
+    };
+
+    size_t length() const {
+      return length_;
+    };
+
+  private:
+    size_t length_;
+    char* str_;
+};
+
+}  // namespace crypto_aes_ctr
+
+#endif  // CRYPTO_SRC_STRING_BYTES_H_

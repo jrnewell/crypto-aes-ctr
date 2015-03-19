@@ -169,13 +169,13 @@ void OpenSSLWrapper::Update(const FunctionCallbackInfo<Value>& args) {
   if (args[0]->IsString()) {
     Local<String> string = args[0].As<String>();
     encoding encoding = StringBytes::ParseEncoding(isolate, args[1], BINARY);
-    if (!StringBytes::IsValidString(string, encoding)) {
+    if (!StringBytes::IsValidString(isolate, string, encoding)) {
       isolate->ThrowException(Exception::TypeError(String::NewFromUtf8(isolate, "Bad input string")));
       return;
     }
-    size_t buflen = StringBytes::StorageSize(string, encoding);
+    size_t buflen = StringBytes::StorageSize(isolate, string, encoding);
     char* buf = new char[buflen];
-    size_t written = StringBytes::Write(buf, buflen, string, encoding);
+    size_t written = StringBytes::Write(isolate, buf, buflen, string, encoding);
     ret_val = base->Update(buf, (int)written, &out, &out_len);
     delete[] buf;
   }
