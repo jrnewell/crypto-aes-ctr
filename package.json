@@ -1,6 +1,6 @@
 {
   "name": "crypto-aes-ctr",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Alternative wrapper around OpenSSL's AES_ctr128_encrypt API",
   "main": "./addon.js",
   "repository": {
@@ -8,7 +8,7 @@
     "url": "git://github.com/jrnewell/crypto-aes-ctr.git"
   },
   "dependencies": {
-    "lodash": "~2.4.1"
+    "lodash": "~3.5.0"
   },
   "keywords": [
     "crypto", "aes", "ctr", "encryption", "openssl"
