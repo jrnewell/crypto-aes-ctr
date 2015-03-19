@@ -19,17 +19,16 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "string_bytes.h"
+#include <assert.h>
+#include <limits.h>
+#include <string.h>  // memcpy
 
 #include <node.h>
 #include <node_buffer.h>
 #include <node_internals.h>
-#include <v8.h>
 #include <util.h>
 
-#include <assert.h>
-#include <limits.h>
-#include <string.h>  // memcpy
+#include "string_bytes.h"
 
 // When creating strings >= this length v8's gc spins up and consumes
 // most of the execution time. For these cases it's more performant to
