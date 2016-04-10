@@ -1,8 +1,8 @@
 {
   "name": "crypto-aes-ctr",
-  "version": "1.0.1",
-  "description": "Alternative wrapper around OpenSSL's AES_ctr128_encrypt API",
-  "main": "./addon.js",
+  "version": "2.0.0",
+  "description": "Convenience wrapper that allows starting aes-256-ctr decryption midstream",
+  "main": "./lib/index.js",
   "repository": {
     "type": "git",
     "url": "git://github.com/jrnewell/crypto-aes-ctr.git"
@@ -18,8 +18,11 @@
   "bugs": {
     "url": "https://github.com/jrnewell/crypto-aes-ctr/issues"
   },
+  "scripts": {
+    "test": "./test/test.sh"
+  },
   "engines": {
-    "node": ">=0.12",
+    "node": ">=0.10",
     "npm": ">=1.4"
   }
 }
